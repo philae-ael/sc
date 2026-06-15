@@ -15,6 +15,13 @@
     "types": ["node"],
     "moduleResolution": "bundler"
   },
+  "ts-node": {
+    "esm": true,
+    "experimentalEsm": true,
+    "compilerOptions": {
+      "module": "ES2020"
+    }
+  },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }

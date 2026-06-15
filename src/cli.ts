@@ -1,74 +1,143 @@
 #!/usr/bin/env node
 
-// Simple example CLI using commander for command handling with proper TypeScript typing
-
 import { Command } from "commander";
-
-const handleGreet = (name: string, options: { age?: string }): void => {
-  console.log(`Hello, ${name}!`);
-  if (options.age) {
-    console.log(`You are ${options.age} years old.`);
-  }
-};
-
-const handleUser = (options: { age?: string; name?: string }): void => {
-  if (options.name || options.age) {
-    console.log("Name:", options.name || "Not provided");
-    console.log("Age:", options.age || "Not provided");
-  } else {
-    console.log("No options provided. Use --help for usage information.");
-  }
-};
-
-const handleAdd = (a: string, b: string): void => {
-  const numA = parseInt(a, 10);
-  const numB = parseInt(b, 10);
-
-  if (isNaN(numA) || isNaN(numB)) {
-    console.error("Error: Both arguments must be valid numbers");
-    process.exit(1);
-  }
-
-  const sum = numA + numB;
-  console.log(`${a} + ${b} = ${sum}`);
-};
-
-// ============================================================================
-// CLI Setup
-// ============================================================================
+import { commitChanges, stageChanges, uncommitChanges } from "./commands/commit.js";
+import { pullChanges, pushChanges } from "./commands/sync.js";
+import { addWorktree, cloneRepo, listWorktrees, removeWorktree } from "./commands/worktree.js";
+import { showStatus } from "./commands/status.js";
 
 const program = new Command();
 
-program
-  .name("my-cli")
-  .description("A simple example CLI with commands")
-  .version("1.0.0");
+program.name("sc").description("Git worktree management tool").version("1.0.0");
 
-// Greet command
 program
-  .command("greet <name>")
-  .description("Greet a person")
-  .option("-a, --age <age>", "Person's age")
-  .action((name: string, options): void => {
-    handleGreet(name, options);
+  .command("clone <url> [targetDir]")
+  .description("Clone a repository with bare .git and create main worktree")
+  .action((url: string, targetDir?: string) => {
+    const result = cloneRepo(url, targetDir);
+    if (result.isErr()) {
+      console.error("✗ Clone failed:", result.error.message);
+      process.exit(1);
+    }
   });
 
-// User command
-program
-  .command("user")
-  .description("Manage user information")
-  .option("-n, --name <name>", "Set the person's name")
-  .option("-a, --age <age>", "Set the person's age")
-  .action((options): void => {
-    handleUser(options);
+const wtCmd = program.command("wt").description("Manage worktrees");
+
+wtCmd
+  .command("add <name> [branch]")
+  .alias("a")
+  .description("Add a new worktree")
+  .action((name: string, branch?: string) => {
+    const result = addWorktree(name, branch);
+    if (result.isErr()) {
+      console.error("✗ Add worktree failed:", result.error.message);
+      process.exit(1);
+    }
   });
 
-// Add subcommand
-program
-  .command("add <a> <b>")
-  .description("Add two numbers together")
-  .action((a: string, b: string): void => {
-    handleAdd(a, b);
+wtCmd
+  .command("remove <name>")
+  .alias("rm")
+  .description("Remove a worktree")
+  .action((name: string) => {
+    const result = removeWorktree(name);
+    if (result.isErr()) {
+      console.error("✗ Remove worktree failed:", result.error.message);
+      process.exit(1);
+    }
   });
+
+wtCmd
+  .command("list")
+  .alias("l")
+  .description("List all worktrees")
+  .action(() => {
+    const result = listWorktrees();
+    if (result.isErr()) {
+      console.error("✗ List worktrees failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("stage")
+  .description("Stage all changes as a staging commit (prevents push)")
+  .action(() => {
+    const result = stageChanges();
+    if (result.isErr()) {
+      console.error("✗ Stage failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("commit <message>")
+  .alias("c")
+  .description("Commit changes (merges with staging commit if previous is staging)")
+  .option("-a, --amend", "Amend the last commit instead of creating a new one")
+  .action((message: string, options: { amend?: boolean }) => {
+    const result = commitChanges(message, options.amend ?? false);
+    if (result.isErr()) {
+      console.error("✗ Commit failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("uncommit")
+  .description("Undo the last commit, keeping its changes staged")
+  .action(() => {
+    const result = uncommitChanges();
+    if (result.isErr()) {
+      console.error("✗ Uncommit failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("pull")
+  .description("Fetch all remotes and pull changes")
+  .action(() => {
+    const result = pullChanges();
+    if (result.isErr()) {
+      console.error("✗ Pull failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("push")
+  .description("Push changes (prevents pushing staging commits)")
+  .option("--force", "Force push even if last commit is a staging commit")
+  .action((options: { force?: boolean }) => {
+    const result = pushChanges(options.force ?? false);
+    if (result.isErr()) {
+      console.error("✗ Push failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("status")
+  .alias("st")
+  .description("Show repository status")
+  .action(() => {
+    const result = showStatus();
+    if (result.isErr()) {
+      console.error("✗ Status failed:", result.error.message);
+      process.exit(1);
+    }
+  });
+
+program.showHelpAfterError(false);
+
+// Show status by default when no command is provided
+program.action(() => {
+  const result = showStatus();
+  if (result.isErr()) {
+    console.error("✗ Status failed:", result.error.message);
+    process.exit(1);
+  }
+});
 
 program.parse();

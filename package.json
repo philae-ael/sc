@@ -6,20 +6,31 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
-    "dev": "ts-node src/cli.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx src/cli.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src/",
+    "fmt": "biome format --write .",
+    "check": "npm run lint && npm run fmt"
   },
   "author": "",
   "license": "MIT",
   "description": "",
   "devDependencies": {
+    "@commander-js/extra-typings": "^15.0.0",
+    "@earendil-works/pi-ai": "^0.79.4",
+    "@earendil-works/pi-coding-agent": "^0.79.4",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.3",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "eslint": "^10.5.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "@commander-js/extra-typings": "^15.0.0"
+    "typescript-eslint": "^8.61.0"
   },
   "dependencies": {
-    "@bomb.sh/args": "^0.3.1",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "neverthrow": "^8.2.0"
   }
 }
